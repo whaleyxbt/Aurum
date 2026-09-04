@@ -26,6 +26,8 @@ class AccountBackup(BaseModel):
     currency: str
     color: str | None
     is_archived: bool
+    # Defaulted so backups created before manual account ordering remain importable.
+    sort_order: int = 0
 
 
 class CategoryBackup(BaseModel):

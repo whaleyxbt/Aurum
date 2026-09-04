@@ -130,9 +130,10 @@ stored — there's no "set balance" endpoint.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/accounts` | List accounts, with live balance. `?include_archived=true` to include archived ones (excluded by default). |
+| `GET` | `/accounts` | List accounts in their saved order, with live balance. `?include_archived=true` to include archived ones (excluded by default). |
 | `POST` | `/accounts` | Create an account. |
 | `PATCH` | `/accounts/{id}` | Update an account (partial). Set `is_archived: true` to archive instead of deleting. |
+| `POST` | `/accounts/{id}/move` | Move an account one visible position up or down. |
 | `DELETE` | `/accounts/{id}` | Delete an account **and every transaction on it** — irreversible. |
 
 **Create/update body:**
@@ -164,9 +165,15 @@ stored — there's no "set balance" endpoint.
   "currency": "USD",
   "color": "#4f46e5",
   "is_archived": false,
+  "sort_order": 0,
   "balance": "1523.40"
 }
 ```
+
+**Move body:** `{"direction": "up", "include_archived": false}`. `direction` is `up` or `down`.
+Set `include_archived` to match the account list currently being displayed; when it is `false`, hidden
+archived accounts are skipped rather than consuming a move. Moving beyond the first or last visible
+position returns `400`.
 
 ## Categories
 

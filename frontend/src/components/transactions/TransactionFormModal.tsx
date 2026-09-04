@@ -9,6 +9,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useCreateTransaction, useUpdateTransaction } from "@/hooks/useTransactions";
 import { useTranslation } from "@/lib/i18n";
 import { buildHierarchicalCategories, translateCategoryName } from "@/lib/categoryLabels";
+import { getDefaultAccountId, setDefaultAccountId } from "@/lib/defaultAccount";
 import { formatCurrency } from "@/lib/format";
 import type { Tag, Transaction, TransactionInput, TransactionSplitInput, TransactionType } from "@/types";
 
@@ -106,7 +107,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Transaction
           : [emptySplitRow(), emptySplitRow()]
       );
     } else {
-      setForm({ ...EMPTY_FORM, account_id: accounts?.[0] ? String(accounts[0].id) : "" });
+      setForm({ ...EMPTY_FORM, account_id: getDefaultAccountId(accounts ?? []) });
       setTags([]);
       setSplitMode(false);
       setSplitRows([emptySplitRow(), emptySplitRow()]);
@@ -123,6 +124,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Transaction
   const relevantCategories = buildHierarchicalCategories(kindCategories, language);
 
   const isSaving = createTransaction.isPending || updateTransaction.isPending;
+  const defaultAccountId = getDefaultAccountId(accounts ?? []);
 
   function updateSplitRow(key: string, patch: Partial<SplitRowState>) {
     setSplitRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -310,7 +312,24 @@ export function TransactionFormModal({ open, onClose, transaction }: Transaction
         </div>
 
         <div>
-          <Label htmlFor="account">{t("transactions.form.accountLabel")}</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="account">{t("transactions.form.accountLabel")}</Label>
+            {form.account_id &&
+              (form.account_id === defaultAccountId ? (
+                <span className="mb-1 text-xs text-text-muted">{t("transactions.form.defaultAccount")}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="mb-1 text-xs text-series-1 hover:underline"
+                  onClick={() => {
+                    setDefaultAccountId(form.account_id);
+                    setForm((prev) => ({ ...prev }));
+                  }}
+                >
+                  {t("transactions.form.makeDefaultAccount")}
+                </button>
+              ))}
+          </div>
           <Select
             id="account"
             required

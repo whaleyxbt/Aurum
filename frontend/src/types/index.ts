@@ -1,4 +1,5 @@
 export type AccountType = "checking" | "debit_card" | "savings" | "credit_card" | "cash" | "investment" | "other";
+export type AccountMoveDirection = "up" | "down";
 export type CategoryKind = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
 export type RecurringFrequency = "weekly" | "monthly" | "yearly";
@@ -10,6 +11,7 @@ export interface Account {
   currency: string;
   color: string | null;
   is_archived: boolean;
+  sort_order: number;
 }
 
 // The Accounts management page's shape — /api/accounts' own endpoints add a
@@ -554,4 +556,3 @@ export interface HealthStatus {
   status: string;
   version: string;
 }
-

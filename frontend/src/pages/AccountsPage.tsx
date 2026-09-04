@@ -4,15 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AccountList } from "@/components/accounts/AccountList";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
-import { useAccounts, useDeleteAccount, useUpdateAccount } from "@/hooks/useAccounts";
+import { useAccounts, useDeleteAccount, useMoveAccount, useUpdateAccount } from "@/hooks/useAccounts";
 import { useTranslation } from "@/lib/i18n";
-import type { Account, AccountWithBalance } from "@/types";
+import type { Account, AccountMoveDirection, AccountWithBalance } from "@/types";
 
 export function AccountsPage() {
   const { t } = useTranslation();
   const [showArchived, setShowArchived] = useState(false);
   const { data: accounts, isLoading } = useAccounts(showArchived);
   const updateAccount = useUpdateAccount();
+  const moveAccount = useMoveAccount();
   const deleteAccount = useDeleteAccount();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,6 +37,10 @@ export function AccountsPage() {
     if (window.confirm(t("account.confirmDelete", { name: account.name }))) {
       deleteAccount.mutate(account.id);
     }
+  }
+
+  function handleMove(account: AccountWithBalance, direction: AccountMoveDirection) {
+    moveAccount.mutate({ id: account.id, direction, includeArchived: showArchived });
   }
 
   return (
@@ -64,6 +69,8 @@ export function AccountsPage() {
             <AccountList
               items={accounts ?? []}
               onEdit={openEditModal}
+              onMove={handleMove}
+              isMovePending={moveAccount.isPending}
               onToggleArchived={handleToggleArchived}
               onDelete={handleDelete}
             />

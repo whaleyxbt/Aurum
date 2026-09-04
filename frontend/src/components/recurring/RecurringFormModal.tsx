@@ -7,6 +7,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useCreateRecurring, useUpdateRecurring } from "@/hooks/useRecurring";
 import { useTranslation } from "@/lib/i18n";
 import { translateCategoryName } from "@/lib/categoryLabels";
+import { getDefaultAccountId } from "@/lib/defaultAccount";
 import type { RecurringFrequency, RecurringTransaction, TransactionType } from "@/types";
 
 interface RecurringFormModalProps {
@@ -56,7 +57,7 @@ export function RecurringFormModal({ open, onClose, recurring }: RecurringFormMo
         anchor_date: recurring.anchor_date,
       });
     } else {
-      setForm({ ...EMPTY_FORM, account_id: accounts?.[0] ? String(accounts[0].id) : "" });
+      setForm({ ...EMPTY_FORM, account_id: getDefaultAccountId(accounts ?? []) });
     }
     setError(null);
   }, [open, recurring, accounts]);

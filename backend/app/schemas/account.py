@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,6 +34,7 @@ class AccountRead(AccountBase):
 
     id: int
     is_archived: bool
+    sort_order: int
 
 
 class AccountWithBalance(AccountRead):
@@ -42,3 +44,8 @@ class AccountWithBalance(AccountRead):
     Cash. Used only by /api/accounts' own endpoints, never nested."""
 
     balance: Decimal
+
+
+class AccountMove(BaseModel):
+    direction: Literal["up", "down"]
+    include_archived: bool = False

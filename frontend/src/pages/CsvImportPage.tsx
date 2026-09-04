@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -8,6 +8,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBulkCreateTransactions } from "@/hooks/useTransactions";
 import { translateCategoryName } from "@/lib/categoryLabels";
+import { getDefaultAccountId } from "@/lib/defaultAccount";
 import { DATE_FORMATS, parseAmount, parseCsv, parseDateWithFormat, type DateFormat } from "@/lib/csv";
 import { formatCurrency } from "@/lib/format";
 import { ApiError } from "@/api/client";
@@ -50,6 +51,10 @@ export function CsvImportPage() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [createdCount, setCreatedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!accountId && accounts?.length) setAccountId(getDefaultAccountId(accounts));
+  }, [accountId, accounts]);
 
   const categoryLookup = useMemo(() => {
     const map: Record<"income" | "expense", Map<string, number>> = { income: new Map(), expense: new Map() };

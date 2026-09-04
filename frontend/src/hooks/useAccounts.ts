@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createAccount, deleteAccount, fetchAccounts, updateAccount } from "@/api/accounts";
-import type { AccountInput } from "@/types";
+import { createAccount, deleteAccount, fetchAccounts, moveAccount, updateAccount } from "@/api/accounts";
+import type { AccountInput, AccountMoveDirection } from "@/types";
 
 export function useAccounts(includeArchived = false) {
   return useQuery({ queryKey: ["accounts", includeArchived], queryFn: () => fetchAccounts(includeArchived) });
@@ -19,6 +19,22 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: Partial<AccountInput> & { is_archived?: boolean } }) =>
       updateAccount(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+}
+
+export function useMoveAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      direction,
+      includeArchived,
+    }: {
+      id: number;
+      direction: AccountMoveDirection;
+      includeArchived: boolean;
+    }) => moveAccount(id, direction, includeArchived),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
 }

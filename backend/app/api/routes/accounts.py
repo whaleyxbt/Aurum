@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
-from app.schemas.account import AccountCreate, AccountUpdate, AccountWithBalance
-from app.services.account_service import create_account, delete_account, list_accounts, update_account
+from app.schemas.account import AccountCreate, AccountMove, AccountUpdate, AccountWithBalance
+from app.services.account_service import create_account, delete_account, list_accounts, move_account, update_account
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -27,6 +27,13 @@ async def update_account_route(
     account_id: int, payload: AccountUpdate, session: AsyncSession = Depends(get_session)
 ) -> AccountWithBalance:
     return await update_account(session, account_id, payload)
+
+
+@router.post("/{account_id}/move", status_code=204)
+async def move_account_route(
+    account_id: int, payload: AccountMove, session: AsyncSession = Depends(get_session)
+) -> None:
+    await move_account(session, account_id, payload)
 
 
 @router.delete("/{account_id}", status_code=204)

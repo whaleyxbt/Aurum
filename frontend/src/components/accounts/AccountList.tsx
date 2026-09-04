@@ -1,11 +1,27 @@
-import { Archive, ArchiveRestore, Banknote, CreditCard, Package, Pencil, PiggyBank, TrendingUp, Trash2, Wallet, type LucideIcon } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Banknote,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  Package,
+  Pencil,
+  PiggyBank,
+  TrendingUp,
+  Trash2,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
-import type { Account, AccountType, AccountWithBalance } from "@/types";
+import type { Account, AccountMoveDirection, AccountType, AccountWithBalance } from "@/types";
 
 interface AccountListProps {
   items: AccountWithBalance[];
   onEdit: (account: Account) => void;
+  onMove: (account: AccountWithBalance, direction: AccountMoveDirection) => void;
+  isMovePending: boolean;
   onToggleArchived: (account: AccountWithBalance) => void;
   onDelete: (account: AccountWithBalance) => void;
 }
@@ -20,7 +36,14 @@ const TYPE_ICONS: Record<AccountType, LucideIcon> = {
   other: Package,
 };
 
-export function AccountList({ items, onEdit, onToggleArchived, onDelete }: AccountListProps) {
+export function AccountList({
+  items,
+  onEdit,
+  onMove,
+  isMovePending,
+  onToggleArchived,
+  onDelete,
+}: AccountListProps) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
@@ -29,7 +52,7 @@ export function AccountList({ items, onEdit, onToggleArchived, onDelete }: Accou
 
   return (
     <ul className="divide-y divide-gridline">
-      {items.map((account) => {
+      {items.map((account, index) => {
         const Icon = TYPE_ICONS[account.type];
         const balance = Number(account.balance);
 
@@ -58,6 +81,28 @@ export function AccountList({ items, onEdit, onToggleArchived, onDelete }: Accou
               {formatCurrency(balance)}
             </span>
             <span className="flex shrink-0 gap-1">
+              <span className="flex flex-col justify-center">
+                <button
+                  type="button"
+                  aria-label={t("account.moveUpLabel")}
+                  title={t("account.moveUpLabel")}
+                  disabled={index === 0 || isMovePending}
+                  onClick={() => onMove(account, "up")}
+                  className="rounded p-1 text-text-muted hover:bg-surface-2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("account.moveDownLabel")}
+                  title={t("account.moveDownLabel")}
+                  disabled={index === items.length - 1 || isMovePending}
+                  onClick={() => onMove(account, "down")}
+                  className="rounded p-1 text-text-muted hover:bg-surface-2 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </span>
               <button
                 type="button"
                 aria-label={account.is_archived ? t("account.unarchiveLabel") : t("account.archiveLabel")}
