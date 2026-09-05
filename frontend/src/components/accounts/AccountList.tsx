@@ -1,4 +1,3 @@
-import { useRef, useState, type PointerEvent } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -15,12 +14,13 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
+import { useAccountDrag } from "@/hooks/useAccountDrag";
 import type { Account, AccountMoveDirection, AccountType, AccountWithBalance } from "@/types";
 
 interface AccountListProps {
   items: AccountWithBalance[];
   onEdit: (account: Account) => void;
-  onMove: (account: AccountWithBalance, direction: AccountMoveDirection | number) => void;
+  onMove: (account: AccountWithBalance, direction: AccountMoveDirection | number) => Promise<void>;
   isMovePending: boolean;
   onToggleArchived: (account: AccountWithBalance) => void;
   onDelete: (account: AccountWithBalance) => void;
@@ -45,73 +45,30 @@ export function AccountList({
   onDelete,
 }: AccountListProps) {
   const { t } = useTranslation();
-  const listRef = useRef<HTMLUListElement>(null);
-  const dragRef = useRef<{ source: number; target: number; pointer: number } | null>(null);
-  const [drag, setDrag] = useState<{ source: number; target: number } | null>(null);
-
-  function cancelDrag() {
-    dragRef.current = null;
-    setDrag(null);
-  }
-
-  function startDrag(event: PointerEvent<HTMLButtonElement>, id: number) {
-    if (isMovePending || !event.isPrimary || event.button !== 0) return;
-    event.preventDefault();
-    event.currentTarget.focus();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { source: id, target: id, pointer: event.pointerId };
-    setDrag({ source: id, target: id });
-  }
-
-  function trackDrag(event: PointerEvent<HTMLButtonElement>) {
-    const current = dragRef.current;
-    if (!current || current.pointer !== event.pointerId) return;
-    const rows = listRef.current?.querySelectorAll<HTMLLIElement>("[data-account-id]");
-    if (!rows?.length) return;
-    const nearest = Array.from(rows).reduce((best, row) => {
-      const rect = row.getBoundingClientRect();
-      const bestRect = best.getBoundingClientRect();
-      return Math.abs(event.clientY - (rect.top + rect.height / 2)) <
-        Math.abs(event.clientY - (bestRect.top + bestRect.height / 2)) ? row : best;
-    });
-    current.target = Number(nearest.dataset.accountId);
-    setDrag({ source: current.source, target: current.target });
-    if (event.clientY < 60) window.scrollBy(0, -20);
-    else if (event.clientY > window.innerHeight - 60) window.scrollBy(0, 20);
-  }
-
-  function finishDrag(event: PointerEvent<HTMLButtonElement>) {
-    const current = dragRef.current;
-    const bounds = listRef.current?.getBoundingClientRect();
-    if (current?.pointer === event.pointerId && bounds &&
-        event.clientX >= bounds.left && event.clientX <= bounds.right &&
-        event.clientY >= bounds.top && event.clientY <= bounds.bottom &&
-        current.source !== current.target) {
-      const account = items.find((item) => item.id === current.source);
-      if (account && items.some((item) => item.id === current.target)) onMove(account, current.target);
-    }
-    cancelDrag();
-  }
+  const { listRef, drag, displayedItems, startDrag, trackDrag, finishDrag, cancelDrag, offsetAt } =
+    useAccountDrag(items, isMovePending, onMove);
 
   if (items.length === 0) {
     return <p className="py-10 text-center text-sm text-text-muted">{t("account.empty")}</p>;
   }
 
   return (
-    <ul ref={listRef} aria-busy={isMovePending} className="divide-y divide-gridline">
-      {items.map((account, index) => {
+    <ul ref={listRef} aria-busy={isMovePending || !!drag} className="relative isolate">
+      {displayedItems.map((account, index) => {
         const Icon = TYPE_ICONS[account.type];
         const balance = Number(account.balance);
+        const lifted = drag?.source === index;
 
         return (
           <li
             key={account.id}
             data-account-id={account.id}
-            className={`relative flex flex-wrap items-center gap-3 py-3 sm:flex-nowrap ${account.is_archived ? "opacity-50" : ""} ${drag?.source === account.id ? "bg-surface-2" : ""}`}
+            data-dragging={lifted && !drag.settling || undefined}
+            style={{ transform: `translate3d(0, ${offsetAt(index)}px, 0)` }}
+            className={`relative flex flex-wrap items-center gap-3 border-b border-gridline py-3 last:border-transparent sm:flex-nowrap duration-200 ease-out motion-reduce:transition-none ${
+              !drag || (lifted && !drag.settling) ? "transition-[box-shadow,background-color]" : "transition-[transform,box-shadow,background-color]"
+            } ${account.is_archived ? "opacity-50" : ""} ${lifted ? "z-10 rounded-lg bg-surface-2 shadow-xl ring-1 ring-gridline" : ""} ${drag ? "select-none will-change-transform" : ""}`}
           >
-            {drag && drag.target === account.id && drag.source !== drag.target && (
-              <span className={`pointer-events-none absolute inset-x-0 h-0.5 bg-series-1 ${items.findIndex((item) => item.id === drag.source) < index ? "bottom-0" : "top-0"}`} />
-            )}
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2">
               <Icon size={16} className="text-text-secondary" />
             </span>
@@ -139,7 +96,7 @@ export function AccountList({
                 type="button"
                 aria-label={t("account.dragLabel", { name: account.name })}
                 title={t("account.dragHint")}
-                disabled={items.length < 2 || isMovePending}
+                disabled={items.length < 2 || isMovePending || drag?.settling}
                 onPointerDown={(event) => startDrag(event, account.id)}
                 onPointerMove={trackDrag}
                 onPointerUp={finishDrag}
@@ -147,11 +104,11 @@ export function AccountList({
                 onLostPointerCapture={cancelDrag}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") cancelDrag();
-                  if (dragRef.current || isMovePending) return;
+                  if (drag || isMovePending) return;
                   if (event.key === "ArrowUp" || event.key === "ArrowDown") {
                     event.preventDefault();
-                    if (event.key === "ArrowUp" && index > 0) onMove(account, "up");
-                    if (event.key === "ArrowDown" && index < items.length - 1) onMove(account, "down");
+                    if (event.key === "ArrowUp" && index > 0) void onMove(account, "up").catch(() => {});
+                    if (event.key === "ArrowDown" && index < items.length - 1) void onMove(account, "down").catch(() => {});
                   }
                 }}
                 className="flex h-11 w-11 touch-none select-none items-center justify-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text-primary cursor-grab active:cursor-grabbing disabled:cursor-default disabled:opacity-25 sm:h-9 sm:w-9"

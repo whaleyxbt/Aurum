@@ -40,7 +40,7 @@ export function AccountsPage() {
   }
 
   function handleMove(account: AccountWithBalance, direction: AccountMoveDirection | number) {
-    moveAccount.mutate({ id: account.id, direction, includeArchived: showArchived });
+    return moveAccount.mutateAsync({ id: account.id, direction, includeArchived: showArchived });
   }
 
   return (
