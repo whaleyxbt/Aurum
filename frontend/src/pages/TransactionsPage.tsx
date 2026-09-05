@@ -274,6 +274,7 @@ export function TransactionsPage() {
           ) : (
             <TransactionsTable
               items={data?.items ?? []}
+              groupByDate={sort === "date_desc"}
               onEdit={openEditModal}
               onDelete={handleDelete}
               onJumpToMonth={isSearching ? handleJumpToMonth : undefined}
