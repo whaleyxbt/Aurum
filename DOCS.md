@@ -412,9 +412,14 @@ the UI). This is deliberate: a missed week never silently back-fills a pile of t
 }
 ```
 
-`anchor_date` is the first due date; each `/post` call advances `last_posted_date` and recomputes
-`next_due_date` (monthly clamps to the shortest month, e.g. day 31 → day 28/29/30; yearly Feb 29
-falls back to Feb 28 in non-leap years).
+`anchor_date` is the first due date and the fixed reference for the schedule. Each `/post` call
+sets `last_posted_date` to today; `next_due_date` is the first anchored occurrence strictly after
+that posting date (or the anchor itself when posted before the start). Posting off schedule
+does not change the scheduled weekday/day-of-month. Monthly dates clamp to the target month's
+last day when needed (31 → 28/29/30), then return to the original day in longer months; yearly
+Feb 29 falls back to Feb 28 in non-leap years and returns to Feb 29 in leap years.
+Without a posting, the due date remains unchanged, including when overdue. Editing the anchor
+or frequency recomputes the schedule without modifying already-posted transactions.
 
 **Response** (`RecurringTransactionRead`) adds computed fields: `next_due_date`, `is_due` (boolean),
 `days_until_due` (negative if overdue), plus denormalized `account_name`/`category_name`/etc. for

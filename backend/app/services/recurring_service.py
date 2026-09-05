@@ -47,25 +47,42 @@ async def _ensure_category_matches_type(
         )
 
 
-def _advance(day: date_, frequency: RecurringFrequency) -> date_:
+def _advance(anchor: date_, frequency: RecurringFrequency, periods: int = 1) -> date_:
+    """Calculate an occurrence from the original anchor, avoiding month-end drift."""
     if frequency == RecurringFrequency.WEEKLY:
-        return day + timedelta(days=7)
+        return anchor + timedelta(weeks=periods)
     if frequency == RecurringFrequency.MONTHLY:
-        year = day.year + (day.month // 12)
-        month = day.month % 12 + 1
-        clamped_day = min(day.day, calendar.monthrange(year, month)[1])
+        years, month_index = divmod(anchor.month - 1 + periods, 12)
+        year = anchor.year + years
+        month = month_index + 1
+        clamped_day = min(anchor.day, calendar.monthrange(year, month)[1])
         return date_(year, month, clamped_day)
     # YEARLY — Feb 29 anchors fall back to Feb 28 in non-leap years.
     try:
-        return day.replace(year=day.year + 1)
+        return anchor.replace(year=anchor.year + periods)
     except ValueError:
-        return day.replace(year=day.year + 1, day=28)
+        return anchor.replace(year=anchor.year + periods, day=28)
 
 
 def _next_due_date(recurring: RecurringTransaction) -> date_:
-    if recurring.last_posted_date is None:
-        return recurring.anchor_date
-    return _advance(recurring.last_posted_date, recurring.frequency)
+    anchor = recurring.anchor_date
+    posted = recurring.last_posted_date
+    if posted is None or posted < anchor:
+        return anchor
+
+    # Posting late skips missed occurrences, but never changes the anchor's
+    # weekday/day-of-month. Use the posting date, not today, so overdue dates
+    # remain overdue until the user posts another transaction.
+    if recurring.frequency == RecurringFrequency.WEEKLY:
+        periods = (posted - anchor).days // 7
+    elif recurring.frequency == RecurringFrequency.MONTHLY:
+        periods = (posted.year - anchor.year) * 12 + posted.month - anchor.month
+    else:
+        periods = posted.year - anchor.year
+    candidate = _advance(anchor, recurring.frequency, periods)
+    if candidate <= posted:
+        candidate = _advance(anchor, recurring.frequency, periods + 1)
+    return candidate
 
 
 def _to_read(recurring: RecurringTransaction) -> RecurringTransactionRead:
