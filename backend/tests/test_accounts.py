@@ -2,6 +2,7 @@
 from datetime import date
 
 from httpx import AsyncClient
+import pytest
 
 from tests.helpers import money, txn_payload
 
@@ -119,3 +120,51 @@ async def test_legacy_backup_without_account_order_remains_moveable(client: Asyn
     )
     assert moved.status_code == 204
     assert await _account_names(client) == ["Main Account", "Alpha", "Zebra"]
+
+
+async def test_drag_moves_across_accounts_and_preserves_hidden_slots(client: AsyncClient, account_id):
+    first = (await client.post("/accounts", json={"name": "First"})).json()
+    archived = (await client.post("/accounts", json={"name": "Archived"})).json()
+    last = (await client.post("/accounts", json={"name": "Last"})).json()
+    await client.patch(f"/accounts/{archived['id']}", json={"is_archived": True})
+    await client.post("/transactions", json=txn_payload(first["id"], type="income", amount="100.00"))
+    before = {a["id"]: a["balance"] for a in (await client.get("/accounts")).json()}
+
+    response = await client.post(
+        f"/accounts/{last['id']}/move", json={"target_account_id": account_id},
+    )
+    assert response.status_code == 204
+    assert await _account_names(client, True) == ["Last", "Main Account", "Archived", "First"]
+    after = {a["id"]: a["balance"] for a in (await client.get("/accounts")).json()}
+    assert before == after
+
+    response = await client.post(
+        f"/accounts/{last['id']}/move", json={"target_account_id": first["id"]},
+    )
+    assert response.status_code == 204
+    assert await _account_names(client, True) == ["Main Account", "First", "Archived", "Last"]
+    response = await client.post(
+        f"/accounts/{archived['id']}/move",
+        json={"target_account_id": account_id, "include_archived": True},
+    )
+    assert response.status_code == 204
+    assert await _account_names(client, True) == ["Archived", "Main Account", "First", "Last"]
+
+
+@pytest.mark.parametrize("payload", [
+    {}, {"direction": "left"}, {"target_account_id": 0},
+    {"direction": "up", "target_account_id": 1},
+])
+async def test_move_rejects_invalid_destination(client: AsyncClient, account_id, payload):
+    response = await client.post(f"/accounts/{account_id}/move", json=payload)
+    assert response.status_code == 422
+    assert await _account_names(client) == ["Main Account"]
+
+
+async def test_drag_rejects_hidden_or_missing_target(client: AsyncClient, account_id):
+    archived = (await client.post("/accounts", json={"name": "Archived"})).json()
+    await client.patch(f"/accounts/{archived['id']}", json={"is_archived": True})
+    for target in [archived["id"], 999999]:
+        response = await client.post(f"/accounts/{account_id}/move", json={"target_account_id": target})
+        assert response.status_code == 400
+        assert await _account_names(client, True) == ["Main Account", "Archived"]

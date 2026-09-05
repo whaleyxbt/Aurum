@@ -424,6 +424,9 @@ const ru = {
   "account.archiveLabel": "Архивировать",
   "account.unarchiveLabel": "Вернуть из архива",
   "account.moveUpLabel": "Переместить счёт выше",
+  "account.dragLabel": "Переместить счёт «{{name}}»",
+  "account.dragHint": "Перетащите счёт или используйте клавиши ↑ и ↓",
+  "account.moveError": "Не удалось сохранить порядок счетов. Попробуйте ещё раз.",
   "account.moveDownLabel": "Переместить счёт ниже",
   "account.confirmDelete":
     "Удалить счёт «{{name}}»?\n\nЭто безвозвратно удалит и ВСЕ транзакции по этому счёту. Если хотите сохранить историю, заархивируйте счёт вместо удаления.",
@@ -923,6 +926,9 @@ const en: Record<keyof typeof ru, string> = {
   "account.archiveLabel": "Archive",
   "account.unarchiveLabel": "Unarchive",
   "account.moveUpLabel": "Move account up",
+  "account.dragLabel": "Move account “{{name}}”",
+  "account.dragHint": "Drag the account or use the ↑ and ↓ keys",
+  "account.moveError": "Could not save the account order. Please try again.",
   "account.moveDownLabel": "Move account down",
   "account.confirmDelete":
     "Delete the account “{{name}}”?\n\nThis will permanently delete ALL transactions on this account too. If you want to keep the history, archive the account instead of deleting it.",

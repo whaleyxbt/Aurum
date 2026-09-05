@@ -13,8 +13,9 @@ export function updateAccount(id: number, input: Partial<AccountInput> & { is_ar
   return api.patch<AccountWithBalance>(`/accounts/${id}`, input);
 }
 
-export function moveAccount(id: number, direction: AccountMoveDirection, includeArchived: boolean) {
-  return api.post<void>(`/accounts/${id}/move`, { direction, include_archived: includeArchived });
+export function moveAccount(id: number, destination: AccountMoveDirection | number, includeArchived: boolean) {
+  const target = typeof destination === "number" ? { target_account_id: destination } : { direction: destination };
+  return api.post<void>(`/accounts/${id}/move`, { ...target, include_archived: includeArchived });
 }
 
 export function deleteAccount(id: number) {

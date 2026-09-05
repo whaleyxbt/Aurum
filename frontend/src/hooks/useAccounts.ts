@@ -32,10 +32,10 @@ export function useMoveAccount() {
       includeArchived,
     }: {
       id: number;
-      direction: AccountMoveDirection;
+      direction: AccountMoveDirection | number;
       includeArchived: boolean;
     }) => moveAccount(id, direction, includeArchived),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
   });
 }
 

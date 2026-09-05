@@ -175,6 +175,11 @@ Set `include_archived` to match the account list currently being displayed; when
 archived accounts are skipped rather than consuming a move. Moving beyond the first or last visible
 position returns `400`.
 
+For drag-and-drop, send `{"target_account_id": 3, "include_archived": false}` instead of
+`direction`. The source moves to the target's visible position; intervening accounts shift
+in order and hidden archived accounts keep their slots. Provide exactly one of
+`direction` or `target_account_id`. A hidden or missing target returns `400`.
+
 ## Categories
 
 Categories classify transactions as income or expense, with one optional level of subcategories

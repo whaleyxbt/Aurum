@@ -39,7 +39,7 @@ export function AccountsPage() {
     }
   }
 
-  function handleMove(account: AccountWithBalance, direction: AccountMoveDirection) {
+  function handleMove(account: AccountWithBalance, direction: AccountMoveDirection | number) {
     moveAccount.mutate({ id: account.id, direction, includeArchived: showArchived });
   }
 
@@ -54,6 +54,9 @@ export function AccountsPage() {
           </Button>
         </CardHeader>
         <CardContent>
+          {moveAccount.isError && (
+            <p role="alert" className="mb-3 text-sm text-danger">{t("account.moveError")}</p>
+          )}
           <label className="mb-3 flex items-center gap-2 text-xs text-text-muted">
             <input
               type="checkbox"

@@ -80,8 +80,8 @@ async def update_account(session: AsyncSession, account_id: int, payload: Accoun
 
 
 async def move_account(session: AsyncSession, account_id: int, payload: AccountMove) -> None:
-    # Lock and normalize the complete order before swapping two visible
-    # neighbors. Normalization also repairs duplicate positions from an old
+    # Lock and normalize the complete order before moving a visible account.
+    # Normalization also repairs duplicate positions from an old
     # backup while retaining its deterministic sort_order/name/id order.
     result = await session.execute(
         select(Account).order_by(Account.sort_order, Account.name, Account.id).with_for_update()
@@ -93,18 +93,29 @@ async def move_account(session: AsyncSession, account_id: int, payload: AccountM
     if account.is_archived and not payload.include_archived:
         raise HTTPException(status_code=400, detail="Archived account is hidden from the current order")
 
-    for position, item in enumerate(accounts):
-        item.sort_order = position
-
     visible_accounts = accounts if payload.include_archived else [item for item in accounts if not item.is_archived]
     current_index = visible_accounts.index(account)
-    offset = -1 if payload.direction == "up" else 1
-    target_index = current_index + offset
+    if payload.target_account_id is not None:
+        target_index = next(
+            (index for index, item in enumerate(visible_accounts) if item.id == payload.target_account_id),
+            None,
+        )
+        if target_index is None:
+            raise HTTPException(status_code=400, detail="Target account is not visible")
+    else:
+        offset = -1 if payload.direction == "up" else 1
+        target_index = current_index + offset
     if target_index < 0 or target_index >= len(visible_accounts):
         raise HTTPException(status_code=400, detail=f"Account cannot move {payload.direction}")
 
-    target = visible_accounts[target_index]
-    account.sort_order, target.sort_order = target.sort_order, account.sort_order
+    visible_accounts = list(visible_accounts)
+    visible_accounts.insert(target_index, visible_accounts.pop(current_index))
+    # Fill only visible slots so hidden archived accounts keep their positions.
+    reordered = iter(visible_accounts)
+    for position, item in enumerate(accounts):
+        if payload.include_archived or not item.is_archived:
+            item = next(reordered)
+        item.sort_order = position
     await session.commit()
 
 

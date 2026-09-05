@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import AccountType
 
@@ -47,5 +47,12 @@ class AccountWithBalance(AccountRead):
 
 
 class AccountMove(BaseModel):
-    direction: Literal["up", "down"]
+    direction: Literal["up", "down"] | None = None
+    target_account_id: int | None = Field(default=None, gt=0)
     include_archived: bool = False
+
+    @model_validator(mode="after")
+    def require_one_destination(self):
+        if (self.direction is None) == (self.target_account_id is None):
+            raise ValueError("Provide either direction or target_account_id")
+        return self
