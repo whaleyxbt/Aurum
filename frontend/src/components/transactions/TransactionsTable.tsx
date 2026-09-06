@@ -110,7 +110,7 @@ export function TransactionsTable({ items, onEdit, onDelete, onJumpToMonth, grou
                     </div>
 
                     <span
-                      className={`col-start-3 row-start-1 whitespace-nowrap text-right text-sm font-semibold tabular-nums sm:text-base ${
+                      className={`col-start-3 row-start-1 whitespace-nowrap text-right text-sm font-semibold tabular-nums sm:row-span-2 sm:self-center sm:text-base ${
                         isTransfer ? "text-text-muted" : isExpense ? "text-text-primary" : "text-success"
                       }`}
                     >
